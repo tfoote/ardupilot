@@ -983,6 +983,13 @@ void Plane::set_servos(void)
             channel_pitch->set_radio_out(elevon.trim2 + (BOOL_TO_SIGN(g.reverse_ch2_elevon) * (ch2 * 500.0f/ SERVO_MAX)));
         }
 
+#if AP_ACS_USE == TRUE
+        //In an emergency, kill throtttle.  
+        if (acs.get_kill_throttle() != 0) {
+            gcs_send_text_P(SEVERITY_LOW,PSTR("ACS COMMANDED: killing throttle"));
+            channel_throttle->servo_out = aparm.throttle_min.get();
+        }
+#endif
         // push out the PWM values
         if (g.mix_mode == 0) {
             channel_roll->calc_pwm();
