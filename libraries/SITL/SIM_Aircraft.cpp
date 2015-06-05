@@ -31,8 +31,12 @@
 #include <DataFlash/DataFlash.h>
 #include <AP_Param/AP_Param.h>
 
-namespace SITL {
+#include <AP_HAL_SITL/Scheduler.h>
 
+extern const AP_HAL::HAL& hal;
+using HALSITL::Scheduler;
+
+namespace SITL {
 /*
   parent class for all simulator types
  */
@@ -252,14 +256,32 @@ void Aircraft::sync_frame_time(void)
                  (double)rate_hz,
                  (double)scaled_frame_time_us);
 #endif
-        uint32_t sleep_time = scaled_frame_time_us*frame_counter;
-        if (sleep_time > min_sleep_time) {
-            usleep(sleep_time);
+
+	HALSITL::Scheduler* scheduler = HALSITL::Scheduler::from(hal.scheduler);
+        uint64_t first_wall_time_us = scheduler->get_start_time_micros64();
+        uint64_t sim_time = first_wall_time_us + AP_HAL::micros64();
+        uint64_t scaled_wall_time_us = first_wall_time_us + 
+                      (uint64_t) ((now - first_wall_time_us) * target_speedup);
+        int64_t diff = scaled_wall_time_us - sim_time;
+
+#if 0
+        printf("%f = %lf - %lf \n", float(diff)                 / 1000000.0f,
+                                    double(scaled_wall_time_us) / 1000000.0,
+                                    double(sim_time)            / 1000000.0);
+#endif //0
+
+	//ACS mod for keeping ROS clocked lined up with Ardupilot and JSBSim
+	//clocks:
+        //slow down a bit if sim_time has gotten ahead of wall_time
+        if (diff < 0) {
+            usleep(100000);
         }
+
         last_wall_time_us = now;
         frame_counter = 0;
     }
 }
+
 
 /* add noise based on throttle level (from 0..1) */
 void Aircraft::add_noise(float throttle)
