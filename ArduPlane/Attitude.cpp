@@ -637,6 +637,11 @@ bool Plane::suppress_throttle(void)
         return true;
     }
 #endif
+#if AP_ACS_USE == TRUE
+    if (acs.get_kill_throttle() != 0) {
+        return true;
+    }
+#endif 
 
     if (!throttle_suppressed) {
         // we've previously met a condition for unsupressing the throttle
@@ -985,9 +990,12 @@ void Plane::set_servos(void)
 
 #if AP_ACS_USE == TRUE
         //In an emergency, kill throtttle.  
-        if (acs.get_kill_throttle() != 0) {
-            gcs_send_text_P(SEVERITY_LOW,PSTR("ACS COMMANDED: killing throttle"));
+        if (acs.get_kill_throttle() != 0 && 
+                ! acs.get_throttle_kill_notified()) {
+            gcs_send_text_P(SEVERITY_HIGH,PSTR("ACS COMMANDED: killing throttle"));
             channel_throttle->servo_out = aparm.throttle_min.get();
+
+            acs.set_throttle_kill_notified(true);
         }
 #endif
         // push out the PWM values
