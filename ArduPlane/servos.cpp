@@ -58,6 +58,13 @@ bool Plane::suppress_throttle(void)
         return true;
     }
 #endif
+#if AP_ACS_USE == TRUE
+    //TODO: consider juat using the terminate flight code elsewhere in this fil
+    //and removing this code.
+    if (acs.get_kill_throttle() != 0) {
+        return true;
+    }
+#endif
 
     if (!throttle_suppressed) {
         // we've previously met a condition for unsupressing the throttle
@@ -633,14 +640,14 @@ void Plane::set_servos(void)
 #if AP_ACS_USE == TRUE
     //TODO: consider using afs.should_crash_vehicle() instead.
     //In an emergency, kill throtttle.  
-    if (acs.get_kill_throttle() != 0) {
-        gcs_send_text_P(SEVERITY_LOW,PSTR("ACS COMMANDED: killing throttle"));
-        //Old way:
-        //channel_throttle->servo_out = aparm.throttle_min.get();
-        //New way:
-        afs.terminate_vehicle();
-        return;
-
+    if (acs.get_kill_throttle() != 0 && ! acs.get_throttle_kill_notified()) {
+            gcs_send_text_P(SEVERITY_HIGH,PSTR("ACS COMMANDED: killing throttle"));
+            acs.set_throttle_kill_notified(true);
+            //Old way:
+            //channel_throttle->servo_out = aparm.throttle_min.get();
+            //New way:
+            afs.terminate_vehicle();
+            return;
     }
 #endif
 
