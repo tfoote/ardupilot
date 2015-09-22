@@ -994,7 +994,7 @@ void Plane::set_servos(void)
             channel_throttle->servo_out = aparm.throttle_min.get();
             
             if (! acs.get_throttle_kill_notified()) {
-                gcs_send_text_P(SEVERITY_HIGH,PSTR("ACS COMMANDED: killing throttle"));
+                gcs_send_text_P(MAV_SEVERITY_CRITICAL,PSTR("ACS COMMANDED: killing throttle"));
                 acs.set_throttle_kill_notified(true);
             }
         } else {
