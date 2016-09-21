@@ -147,7 +147,7 @@ private:
     uint16_t _framerate;
     uint8_t _instance;
     uint16_t _base_port;
-    struct sockaddr_in _rcout_addr;
+    struct sockaddr_in _rc_out_addr;
     pid_t _parent_pid;
     uint32_t _update_count;
 
@@ -162,8 +162,8 @@ private:
 
     SocketAPM _sitl_rc_in{true};
     SITL::SITL *_sitl;
-    uint16_t _rcout_port;
-    uint16_t _rcin_port;
+    uint16_t _rc_out_port;
+    uint16_t _rc_in_port;
     uint16_t _fg_view_port;
     float _current;
 
