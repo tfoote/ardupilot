@@ -22,6 +22,8 @@
 #include <stdio.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <errno.h>
+
 
 #ifdef __CYGWIN__
 #include <windows.h>
@@ -52,6 +54,8 @@ Aircraft::Aircraft(const char *home_str, const char *frame_str) :
     rate_hz(1200),
     autotest_dir(NULL),
     frame(frame_str),
+    socket_in(true),
+    socket_out(true),
 #ifdef __CYGWIN__
     min_sleep_time(20000)
 #else
@@ -393,6 +397,26 @@ uint64_t Aircraft::get_wall_time_us() const
 void Aircraft::set_speedup(float speedup)
 {
     setup_frame_time(rate_hz, speedup);
+}
+
+/*
+  Create and set in/out socket
+*/
+void Aircraft::set_interface_ports(const char* address, const int port_in, const int port_out)
+{
+    if (!socket_in.bind(address, port_in)) {
+        fprintf(stderr, "SITL: socket in bind failed - %s\n", strerror(errno));
+        exit(1);
+    }
+    socket_in.reuseaddress();
+    socket_in.set_blocking(false);
+
+    if (!socket_out.connect(address, port_out)) {
+        fprintf(stderr, "SITL: socket out bind failed - %s\n", strerror(errno));
+        exit(1);
+    }
+    socket_out.reuseaddress();
+    socket_out.set_blocking(false);
 }
 
 /*

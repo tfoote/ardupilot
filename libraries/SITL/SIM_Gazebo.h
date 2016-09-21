@@ -19,8 +19,6 @@
 
 #pragma once
 
-#include <AP_HAL/utility/Socket.h>
-
 #include "SIM_Aircraft.h"
 
 namespace SITL {
@@ -61,13 +59,11 @@ private:
       double position_xyz[3];
     };
 
-    void send_servos_heli(const struct sitl_input &input);
-    void send_servos_fixed_wing(const struct sitl_input &input);
     void recv_fdm(const struct sitl_input &input);
     void send_servos(const struct sitl_input &input);
 
     double last_timestamp;
-    SocketAPM sock;
+
 };
 
 } // namespace SITL

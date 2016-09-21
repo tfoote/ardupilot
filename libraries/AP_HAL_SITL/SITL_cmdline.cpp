@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <signal.h>
 #include <unistd.h>
+#include <map>
 #include <AP_HAL/utility/getopt_cpp.h>
 
 #include <SITL/SIM_Multicopter.h>
@@ -44,23 +45,83 @@ static void _sig_fpe(int signum)
 void SITL_State::_usage(void)
 {
     printf("Options:\n"
-           "\t--home HOME        set home location (lat,lng,alt,yaw)\n"
-           "\t--model MODEL      set simulation model\n"
-           "\t--wipe             wipe eeprom and dataflash\n"
-           "\t--rate RATE        set SITL framerate\n"
-           "\t--console          use console instead of TCP ports\n"
-           "\t--instance N       set instance of SITL (adds 10*instance to all port numbers)\n"
-           "\t--speedup SPEEDUP  set simulation speedup\n"
-           "\t--gimbal           enable simulated MAVLink gimbal\n"
-           "\t--autotest-dir DIR set directory for additional files\n"
-           "\t--uartA device     set device string for UARTA\n"
-           "\t--uartB device     set device string for UARTB\n"
-           "\t--uartC device     set device string for UARTC\n"
-           "\t--uartD device     set device string for UARTD\n"
-           "\t--uartE device     set device string for UARTE\n"
+           "\t--home HOME              set home location (lat,lng,alt,yaw)\n"
+           "\t--model MODEL            set simulation model\n"
+           "\t--wipe                   wipe eeprom and dataflash\n"
+           "\t--rate RATE              set SITL framerate\n"
+           "\t--console                use console instead of TCP ports\n"
+           "\t--instance N             set instance of SITL (adds 10*instance to all port numbers)\n"
+           "\t--speedup SPEEDUP        set simulation speedup\n"
+           "\t--gimbal                 enable simulated MAVLink gimbal\n"
+           "\t--autotest-dir DIR       set directory for additional files\n"
+           "\t--uartA device           set device string for UARTA\n"
+           "\t--uartB device           set device string for UARTB\n"
+           "\t--uartC device           set device string for UARTC\n"
+           "\t--uartD device           set device string for UARTD\n"
+           "\t--uartE device           set device string for UARTE\n"
+           "\t--gazebo-address ADDR    set address string for gazebo\n"
+           "\t--gazebo-port-in PORT    set port num for gazebo in\n"
+           "\t--gazebo-port-out PORT   set port num for gazebo out\n"
            "\t--defaults path    set path to defaults file\n"
         );
 }
+ enum simModelEnum {
+        QUADPLANE = 0,
+        XPLANE,
+        FIREFLY,
+        PLUS,
+        QUAD,
+        COPTER,
+        CROSS,
+        HEXA,
+        OCTA,
+        TRI,
+        Y6,
+        HELI,
+        HELIDUAL,
+        HELICOMPOUND,
+        SINGLECOPTER,
+        COAXCOPTER,
+        ROVER,
+        CRRCSIM,
+        JSBSIM,
+        FLIGHTAXIS,
+        GAZEBO,
+        LASTLETTER,
+        TRACKER,
+        BALLOON,
+        PLANE,
+        CALIBRATION
+    };
+
+static const std::map<std::string, simModelEnum> simModelMap = {
+        { "quadplane",          QUADPLANE},
+        { "xplane",             XPLANE},
+        { "firefly",            FIREFLY},
+        { "+",                  PLUS},
+        { "quad",               QUAD},
+        { "copter",             COPTER},
+        { "x",                  CROSS},
+        { "hexa",               HEXA},
+        { "octa",               OCTA},
+        { "tri",                TRI},
+        { "y6",                 Y6},
+        { "heli",               HELI},
+        { "heli-dual",          HELIDUAL},
+        { "heli-compound",      HELICOMPOUND},
+        { "singlecopter",       SINGLECOPTER},
+        { "coaxcopter",         COAXCOPTER},
+        { "rover",              ROVER},
+        { "crrcsim",            CRRCSIM},
+        { "jsbsim",             JSBSIM},
+        { "flightaxis",         FLIGHTAXIS},
+        { "gazebo",             GAZEBO},
+        { "last_letter",        LASTLETTER},
+        { "tracker",            TRACKER},
+        { "balloon",            BALLOON},
+        { "plane",              PLANE},
+        { "calibration",        CALIBRATION}
+    };
 
 static const struct {
     const char *name;
@@ -93,6 +154,7 @@ static const struct {
     { "plane",              Plane::create },
     { "calibration",        Calibration::create },
 };
+
 
 void SITL_State::_set_signal_handlers(void) const
 {
@@ -132,6 +194,9 @@ void SITL_State::_parse_command_line(int argc, char * const argv[])
     _rc_out_port = 5502;
     _rc_in_port = 5501;
     _fdm_address = "127.0.0.1";
+    _gazebo_address = "127.0.0.1";
+    _gazebo_port_in = 9003;
+    _gazebo_port_out = 9002;
     _client_address = NULL;
     _instance = 0;
 
@@ -147,6 +212,9 @@ void SITL_State::_parse_command_line(int argc, char * const argv[])
         CMDLINE_UARTF,
         CMDLINE_RTSCTS,
         CMDLINE_FGVIEW,
+        CMDLINE_GAZEBO_ADDRESS,
+        CMDLINE_GAZEBO_PORT_IN,
+        CMDLINE_GAZEBO_PORT_OUT,
         CMDLINE_DEFAULTS
     };
 
@@ -172,6 +240,9 @@ void SITL_State::_parse_command_line(int argc, char * const argv[])
         {"defaults",        true,   0, CMDLINE_DEFAULTS},
         {"rtscts",          false,  0, CMDLINE_RTSCTS},
         {"fgview",          false,  0, CMDLINE_FGVIEW},
+        {"gazebo-address",  true,  0, CMDLINE_GAZEBO_ADDRESS},
+        {"gazebo-port-in",  true,  0, CMDLINE_GAZEBO_PORT_IN},
+        {"gazebo-port-out", true,  0, CMDLINE_GAZEBO_PORT_OUT},
         {0, false, 0, 0}
     };
 
@@ -195,6 +266,8 @@ void SITL_State::_parse_command_line(int argc, char * const argv[])
             _base_port  += _instance * 10;
             _rc_out_port += _instance * 10;
             _rc_in_port += _instance * 10;
+            _gazebo_port_in += _instance * 10;
+            _gazebo_port_out += _instance * 10;
         }
         break;
         case 'P':
@@ -241,6 +314,15 @@ void SITL_State::_parse_command_line(int argc, char * const argv[])
             break;
         case CMDLINE_FGVIEW:
             _use_fg_view = true;
+        case CMDLINE_GAZEBO_ADDRESS:
+            _gazebo_address = gopt.optarg;
+            break;
+        case CMDLINE_GAZEBO_PORT_IN:
+            _gazebo_port_in = atoi(gopt.optarg);
+            break;
+        case CMDLINE_GAZEBO_PORT_OUT:
+            _gazebo_port_out = atoi(gopt.optarg);
+            break;
         default:
             _usage();
             exit(1);
@@ -252,17 +334,21 @@ void SITL_State::_parse_command_line(int argc, char * const argv[])
         exit(1);
     }
 
-    for (uint8_t i=0; i < ARRAY_SIZE(model_constructors); i++) {
-        if (strncasecmp(model_constructors[i].name, model_str, strlen(model_constructors[i].name)) == 0) {
-            sitl_model = model_constructors[i].constructor(home_str, model_str);
-            sitl_model->set_speedup(speedup);
-            sitl_model->set_instance(_instance);
-            sitl_model->set_autotest_dir(autotest_dir);
-            _synthetic_clock_mode = true;
-            printf("Started model %s at %s at speed %.1f\n", model_str, home_str, speedup);
-            break;
+    if (simModelMap.count(model_str))
+    {
+        const simModelEnum simModel = simModelMap.at(model_str);
+        sitl_model = model_constructors[simModel].constructor(home_str, model_str);
+        if (simModel == GAZEBO)
+        {
+            sitl_model->set_interface_ports(_gazebo_address, _gazebo_port_in, _gazebo_port_out);
         }
+        sitl_model->set_speedup(speedup);
+        sitl_model->set_instance(_instance);
+        sitl_model->set_autotest_dir(autotest_dir);
+        _synthetic_clock_mode = true;
+        printf("Started model %s at %s at speed %.1f\n", model_str, home_str, speedup);
     }
+
     if (sitl_model == nullptr) {
         printf("Vehicle model (%s) not found\n", model_str);
         exit(1);
