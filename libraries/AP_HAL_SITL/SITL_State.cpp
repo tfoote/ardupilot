@@ -68,9 +68,9 @@ void SITL_State::_sitl_setup(const char *home_str)
 #ifndef __CYGWIN__
     _parent_pid = getppid();
 #endif
-    _rcout_addr.sin_family = AF_INET;
-    _rcout_addr.sin_port = htons(_rcout_port);
-    inet_pton(AF_INET, _fdm_address, &_rcout_addr.sin_addr);
+    _rc_out_addr.sin_family = AF_INET;
+    _rc_out_addr.sin_port = htons(_rc_out_port);
+    inet_pton(AF_INET, _fdm_address, &_rc_out_addr.sin_addr);
 
 #ifndef HIL_MODE
     _setup_fdm();
@@ -119,7 +119,7 @@ void SITL_State::_sitl_setup(const char *home_str)
  */
 void SITL_State::_setup_fdm(void)
 {
-    if (!_sitl_rc_in.bind("0.0.0.0", _simin_port)) {
+    if (!_sitl_rc_in.bind("0.0.0.0", _rc_in_port)) {
         fprintf(stderr, "SITL: socket bind failed - %s\n", strerror(errno));
         exit(1);
     }
@@ -203,7 +203,7 @@ void SITL_State::wait_clock(uint64_t wait_time_usec)
 /*
   check for a SITL FDM packet
  */
-void SITL_State::_fdm_input(void)
+void SITL_State::_check_rc_input(void)
 {
     ssize_t size;
     struct pwm_packet {
@@ -274,7 +274,7 @@ void SITL_State::_fdm_input_local(void)
     SITL::Aircraft::sitl_input input;
 
     // check for direct RC input
-    _fdm_input();
+    _check_rc_input();
 
     // construct servos structure for FDM
     _simulator_servos(input);
