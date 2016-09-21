@@ -173,7 +173,7 @@ void SITL_State::_parse_command_line(int argc, char * const argv[])
         {"autotest-dir",    true,   0, CMDLINE_AUTOTESTDIR},
         {"defaults",        true,   0, CMDLINE_DEFAULTS},
         {"rtscts",          false,  0, CMDLINE_RTSCTS},
-        {"disable-fgview",  false,  0, CMDLINE_FGVIEW},
+        {"fgview",          false,  0, CMDLINE_FGVIEW},
         {0, false, 0, 0}
     };
 
@@ -246,8 +246,7 @@ void SITL_State::_parse_command_line(int argc, char * const argv[])
             _uart_path[opt - CMDLINE_UARTA] = gopt.optarg;
             break;
         case CMDLINE_FGVIEW:
-            _use_fg_view = false;
-            break;
+            _use_fg_view = true;
         default:
             _usage();
             exit(1);
