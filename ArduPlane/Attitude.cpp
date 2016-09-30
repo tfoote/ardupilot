@@ -991,10 +991,10 @@ void Plane::set_servos(void)
 #if AP_ACS_USE == TRUE
         //In an emergency, kill throtttle.  
         if (acs.get_kill_throttle() != 0) {
-            channel_throttle->servo_out = aparm.throttle_min.get();
+            channel_throttle->set_servo_out(aparm.throttle_min.get());
             
             if (! acs.get_throttle_kill_notified()) {
-                gcs_send_text_P(MAV_SEVERITY_CRITICAL,PSTR("ACS COMMANDED: killing throttle"));
+                gcs_send_text(MAV_SEVERITY_CRITICAL,"ACS COMMANDED: killing throttle");
                 acs.set_throttle_kill_notified(true);
             }
         } else {
