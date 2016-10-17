@@ -758,6 +758,14 @@ bool GCS_MAVLINK_Plane::try_send_message(enum ap_message id)
         send_ahrs(plane.ahrs);
         break;
 
+    case MSG_GLOBAL_POS_ATT_NED:
+#if AP_ACS_USE == TRUE && AP_AHRS_NAVEKF_AVAILABLE == 1
+        CHECK_PAYLOAD_SIZE(GLOBAL_POS_ATT_NED);
+        plane.acs.send_position_attitude_to_payload(plane.ahrs, chan,
+                plane.DataFlash, plane.is_flying());
+#endif
+        break;
+
     case MSG_SIMSTATE:
         CHECK_PAYLOAD_SIZE(SIMSTATE);
         plane.send_simstate(chan);
@@ -1020,6 +1028,7 @@ GCS_MAVLINK_Plane::data_stream_send(void)
     if (plane.gcs_out_of_time) return;
 
     if (stream_trigger(STREAM_EXTENDED_STATUS)) {
+        send_message(MSG_GLOBAL_POS_ATT_NED);
         send_message(MSG_EXTENDED_STATUS1);
         send_message(MSG_EXTENDED_STATUS2);
         send_message(MSG_CURRENT_WAYPOINT);
@@ -1284,6 +1293,42 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
             } else {
                 result = MAV_RESULT_ACCEPTED;
             }
+            break;
+        
+        case MAV_CMD_OVERRIDE_GOTO:
+            //don't let the payload do anything outside AUTO mode
+            if (plane.control_mode != AUTO) {
+                result = MAV_RESULT_FAILED;
+
+            //don't let the payload do anything during landing stages
+            } else if (plane.flight_stage == AP_SpdHgtControl::FLIGHT_LAND_APPROACH ||
+                    plane.flight_stage == AP_SpdHgtControl::FLIGHT_LAND_FINAL /* ||
+                    flight_stage == AP_SpdHgtControl::FLIGHT_LAND_GO_AROUND
+                    TODO: Consdier GO_AROUND when it's merged with dev. */) { 
+               
+                result = MAV_RESULT_FAILED;    
+            } else {
+                //update the current waypoint
+                
+                if (plane.g.loiter_radius < 0) {
+                    plane.loiter.direction = -1;
+                } else {
+                    plane.loiter.direction = 1;
+                }
+
+                plane.next_WP_loc.lat = (int32_t)(packet.param5 * 1.0e7f); 
+                plane.next_WP_loc.lng = (int32_t)(packet.param6 * 1.0e7f);
+                plane.next_WP_loc.alt = (int32_t)(plane.home.alt + 100.0f*packet.param7);
+                //TODO: terrain following altitude
+
+                result = MAV_RESULT_ACCEPTED;
+
+                //log the MAV_CMD_OVERRIDE_GOTO receipt in data flash:
+                char mesg[64];
+                snprintf(mesg, 64, "GOTO T:%d Lat:%d Lon:%d Alt:%d", AP_HAL::millis(), plane.next_WP_loc.lat, plane.next_WP_loc.lng, plane.next_WP_loc.alt);
+                plane.DataFlash.Log_Write_Message(mesg);
+            }                 
+
             break;
 
         case MAV_CMD_NAV_LOITER_UNLIM:
@@ -1615,7 +1660,7 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
                 }
             }
             break;
-
+        
         case MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES: {
             if (is_equal(packet.param1,1.0f)) {
                 send_autopilot_version(FIRMWARE_VERSION);
@@ -1792,6 +1837,13 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
 
     case MAVLINK_MSG_ID_MISSION_SET_CURRENT:
     {
+#if AP_ACS_USE == TRUE
+        //When the user sets a waypoint explicitly, assume they may have asked 
+        //to leave a preland flight phase.  This needs to happen to re-enable
+        //battery, GCS, and payload heartbeat failsafes if the user had
+        //started pre-land phase.
+        plane.acs.set_preland_started(false);
+#endif
         // disable cross-track when user asks for WP change, to
         // prevent unexpected flight paths
         plane.auto_state.next_wp_no_crosstrack = true;
@@ -1973,6 +2025,11 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
         // our GCS for failsafe purposes
         if (msg->sysid != plane.g.sysid_my_gcs) break;
         plane.failsafe.last_heartbeat_ms = AP_HAL::millis();
+#if AP_ACS_USE == TRUE
+        //if acs.handle_heartbeat() returns true, then the heartbeat
+        //was from a companion computer, not from a GCS
+        if (plane.acs.handle_heartbeat(msg)) break;
+#endif
         break;
     }
 

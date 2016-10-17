@@ -1,5 +1,5 @@
 /// -*- tab-width: 4; Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*-
-
+ 
 /*
    Lead developer: Andrew Tridgell
  
@@ -84,6 +84,9 @@ const AP_Scheduler::Task Plane::scheduler_tasks[] = {
     SCHED_TASK(dataflash_periodic,     50,    400),
     SCHED_TASK(avoidance_adsb_update,  10,    100),
     SCHED_TASK(button_update,           5,    100),
+#if AP_ACS_USE == TRUE
+    SCHED_TASK(acs_check,               5,   1000), 
+#endif //AP_ACS_ENABLE
 };
 
 void Plane::setup() 
@@ -94,6 +97,10 @@ void Plane::setup()
     AP_Param::setup_sketch_defaults();
 
     AP_Notify::flags.failsafe_battery = false;
+
+#if AP_ACS_USE == TRUE
+    previous_fs_state = AP_ACS::NO_FS;
+#endif //AP_ACS_USE==TRUE
 
     notify.init(false);
 
@@ -368,6 +375,88 @@ void Plane::compass_save()
         compass.save_offsets();
     }
 }
+
+#if AP_ACS_USE == TRUE
+/* 
+ check for ACS failsafes 
+ */
+void Plane::acs_check(void) {
+    acs.check(AP_ACS::ACS_FlightMode(control_mode), 
+            TECS_controller.get_flight_stage(), 
+            channel_throttle->get_servo_out(), failsafe.last_heartbeat_ms,
+            gps.last_fix_time_ms(), geofence_breached(), is_flying());
+
+    AP_ACS::FailsafeState current_fs_state = acs.get_current_fs_state();
+    //always ignore failsafes in manual modes
+    if (control_mode != MANUAL && control_mode != FLY_BY_WIRE_B && control_mode != FLY_BY_WIRE_A) {
+        switch (current_fs_state) {
+            case AP_ACS::GPS_LONG_FS:
+            case AP_ACS::GPS_SHORT_FS:
+                if (control_mode != LOITER) {
+                    //send alert to GCS
+                    if (current_fs_state == AP_ACS::GPS_SHORT_FS) {
+                        gcs_send_text(MAV_SEVERITY_CRITICAL,"GPS failsafe: LOITER");
+                    } 
+                    set_mode(LOITER, MODE_REASON_UNKNOWN);
+                }
+
+                if (current_fs_state == AP_ACS::GPS_LONG_FS &&
+                        previous_fs_state != AP_ACS::GPS_LONG_FS) {
+                    //scream Mayday!
+                    printf("previous_fs_state %d \n", previous_fs_state);
+                    gcs_send_text(MAV_SEVERITY_CRITICAL, "GPS lost killing throttle");
+                }
+                break;
+
+            case AP_ACS::GEOFENCE_SECONDARY_FS:
+                if (previous_fs_state != AP_ACS::GEOFENCE_SECONDARY_FS) {
+                    gcs_send_text(MAV_SEVERITY_CRITICAL, "Geofence breach too long. Killing Throttle");
+                }
+                break;
+
+            case AP_ACS::GPS_RECOVERING_FS:
+                if (control_mode == LOITER) {
+                    set_mode((FlightMode) acs.get_previous_mode(), MODE_REASON_UNKNOWN);
+                }
+                break;
+
+            case AP_ACS::GCS_AUTOLAND_FS:
+                //the conditional ensures an edge triggered event
+                if (previous_fs_state != AP_ACS::GCS_AUTOLAND_FS) {
+                    //try to tell GCS what we're doing (it may not be able to hear us)
+                    gcs_send_text(MAV_SEVERITY_CRITICAL,"No contact with GCS for too long: auto-landing.");
+
+                    //start landing if not already
+                    if (! jump_to_landing_sequence()) {
+                        gcs_send_text(MAV_SEVERITY_CRITICAL,"Failed to start emergency land sequence!!");
+                    }
+                }
+                break;
+
+            case AP_ACS::MOTOR_FS:
+                 //the conditional ensures an edge triggered event
+                if (previous_fs_state != AP_ACS::MOTOR_FS) {
+                    gcs_send_text(MAV_SEVERITY_CRITICAL,"Motor failure detected.");
+                    set_mode(RTL, MODE_REASON_UNKNOWN);
+                }
+                break;
+
+            case AP_ACS::NO_COMPANION_COMPUTER_FS:
+                //the conditional ensures an edge triggered event
+                if (previous_fs_state != AP_ACS::NO_COMPANION_COMPUTER_FS) {
+                    set_mode(RTL, MODE_REASON_UNKNOWN);
+                    gcs_send_text(MAV_SEVERITY_CRITICAL, "No companion computer");
+                }
+                break;
+
+            default:
+                break;
+        } //switch
+    }// if not in manual control mode
+
+    previous_fs_state = current_fs_state;
+}
+#endif //AP_ACS_USE
 
 void Plane::terrain_update(void)
 {

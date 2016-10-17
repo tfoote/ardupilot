@@ -637,6 +637,11 @@ bool Plane::suppress_throttle(void)
         return true;
     }
 #endif
+#if AP_ACS_USE == TRUE
+    if (acs.get_kill_throttle() != 0) {
+        return true;
+    }
+#endif 
 
     if (!throttle_suppressed) {
         // we've previously met a condition for unsupressing the throttle
@@ -983,6 +988,19 @@ void Plane::set_servos(void)
             channel_pitch->set_radio_out(elevon.trim2 + (BOOL_TO_SIGN(g.reverse_ch2_elevon) * (ch2 * 500.0f/ SERVO_MAX)));
         }
 
+#if AP_ACS_USE == TRUE
+        //In an emergency, kill throtttle.  
+        if (acs.get_kill_throttle() != 0) {
+            channel_throttle->set_servo_out(aparm.throttle_min.get());
+            
+            if (! acs.get_throttle_kill_notified()) {
+                gcs_send_text(MAV_SEVERITY_CRITICAL,"ACS COMMANDED: killing throttle");
+                acs.set_throttle_kill_notified(true);
+            }
+        } else {
+            acs.set_throttle_kill_notified(false);
+        }
+#endif
         // push out the PWM values
         if (g.mix_mode == 0) {
             channel_roll->calc_pwm();

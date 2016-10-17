@@ -10,12 +10,18 @@ void Plane::failsafe_short_on_event(enum failsafe_state fstype, mode_reason_t re
     gcs_send_text(MAV_SEVERITY_WARNING, "Failsafe. Short event on, ");
     switch(control_mode)
     {
+#if AP_ACS_USE != TRUE
     case MANUAL:
+#endif
     case STABILIZE:
     case ACRO:
+#if AP_ACS_USE != TRUE
     case FLY_BY_WIRE_A:
+#endif
     case AUTOTUNE:
+#if AP_ACS_USE != TRUE
     case FLY_BY_WIRE_B:
+#endif
     case CRUISE:
     case TRAINING:
         failsafe.saved_mode = control_mode;
@@ -69,12 +75,18 @@ void Plane::failsafe_long_on_event(enum failsafe_state fstype, mode_reason_t rea
     failsafe.state = fstype;
     switch(control_mode)
     {
+#if AP_ACS_USE != TRUE
     case MANUAL:
+#endif
     case STABILIZE:
     case ACRO:
+#if AP_ACS_USE != TRUE
     case FLY_BY_WIRE_A:
+#endif
     case AUTOTUNE:
+#if AP_ACS_USE != TRUE
     case FLY_BY_WIRE_B:
+#endif
     case CRUISE:
     case TRAINING:
     case CIRCLE:
@@ -138,6 +150,10 @@ void Plane::failsafe_short_off_event(mode_reason_t reason)
 
 void Plane::low_battery_event(void)
 {
+#if AP_ACS_USE == TRUE
+    if (control_mode == MANUAL || control_mode == FLY_BY_WIRE_B || control_mode == FLY_BY_WIRE_A) return;
+#endif
+
     if (failsafe.low_battery) {
         return;
     }
@@ -146,9 +162,21 @@ void Plane::low_battery_event(void)
     if (flight_stage != AP_SpdHgtControl::FLIGHT_LAND_FINAL &&
         flight_stage != AP_SpdHgtControl::FLIGHT_LAND_PREFLARE &&
         flight_stage != AP_SpdHgtControl::FLIGHT_LAND_APPROACH) {
+#if AP_ACS_USE == TRUE
+        if (! acs.preland_started()) {
+            gcs_send_text(MAV_SEVERITY_CRITICAL,"Battery low: auto-landing.");
+
+            //start landing if not already (ACS-specific behavior -- land vice RTL)
+            if (! jump_to_landing_sequence()) {
+                gcs_send_text(MAV_SEVERITY_CRITICAL,"Failed to start emergency land sequence!!");
+            }
+        }
+#else
     	set_mode(RTL, MODE_REASON_BATTERY_FAILSAFE);
     	aparm.throttle_cruise.load();
+#endif //AP_ACS_USE == TRUE
     }
+
     failsafe.low_battery = true;
     AP_Notify::flags.failsafe_battery = true;
 }
