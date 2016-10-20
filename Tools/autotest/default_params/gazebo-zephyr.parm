@@ -14,3 +14,11 @@ INS_ACC2SCAL_Y   1.001
 INS_ACC2SCAL_Z   1.001
 INS_GYR_CAL      0
 ARSPD_ENABLE 0
+
+# Keeps zephyr from driving away before being armed
+ARMING_REQUIRE   2.000000
+
+# Higher gains for roll control to improve tracking
+RLL2SRV_D        0.200000
+RLL2SRV_I        0.300000
+RLL2SRV_P        2.500000
