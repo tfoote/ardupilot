@@ -176,6 +176,7 @@ private:
     const char *_gazebo_address;
     int _gazebo_port_in;
     int _gazebo_port_out;
+    int _irlock_port;
 
     // delay buffer variables
     static const uint8_t mag_buffer_length = 250;
