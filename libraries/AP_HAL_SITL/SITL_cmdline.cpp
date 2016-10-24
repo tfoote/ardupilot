@@ -62,7 +62,10 @@ void SITL_State::_usage(void)
            "\t--gazebo-address ADDR    set address string for gazebo\n"
            "\t--gazebo-port-in PORT    set port num for gazebo in\n"
            "\t--gazebo-port-out PORT   set port num for gazebo out\n"
-           "\t--defaults path    set path to defaults file\n"
+           "\t--irlock-port PORT       set port num for irlock\n"
+           "\t--rc-in-port PORT       set port num for rc in\n"
+           "\t--base-port PORT         set port num for base port(default 5670) must be before -I option\n"
+           "\t--defaults path          set path to defaults file\n"
         );
 }
  enum simModelEnum {
@@ -198,6 +201,7 @@ void SITL_State::_parse_command_line(int argc, char * const argv[])
     _gazebo_address = "127.0.0.1";
     _gazebo_port_in = 9003;
     _gazebo_port_out = 9002;
+    _irlock_port = 9005;
     _client_address = NULL;
     _instance = 0;
 
@@ -216,6 +220,9 @@ void SITL_State::_parse_command_line(int argc, char * const argv[])
         CMDLINE_GAZEBO_ADDRESS,
         CMDLINE_GAZEBO_PORT_IN,
         CMDLINE_GAZEBO_PORT_OUT,
+        CMDLINE_BASE_PORT,
+        CMDLINE_IRLOCK_PORT,
+        CMDLINE_RCIN_PORT,
         CMDLINE_DEFAULTS
     };
 
@@ -244,6 +251,9 @@ void SITL_State::_parse_command_line(int argc, char * const argv[])
         {"gazebo-address",  true,  0, CMDLINE_GAZEBO_ADDRESS},
         {"gazebo-port-in",  true,  0, CMDLINE_GAZEBO_PORT_IN},
         {"gazebo-port-out", true,  0, CMDLINE_GAZEBO_PORT_OUT},
+        {"base-port",       true,  0, CMDLINE_BASE_PORT},
+        {"irlock-port",     true,  0, CMDLINE_IRLOCK_PORT},
+        {"rc-in-port",       true,  0, CMDLINE_RCIN_PORT},
         {0, false, 0, 0}
     };
 
@@ -323,6 +333,15 @@ void SITL_State::_parse_command_line(int argc, char * const argv[])
             break;
         case CMDLINE_GAZEBO_PORT_OUT:
             _gazebo_port_out = atoi(gopt.optarg);
+            break;
+        case CMDLINE_IRLOCK_PORT:
+            _irlock_port = atoi(gopt.optarg);
+            break;
+        case CMDLINE_RCIN_PORT:
+            _rc_in_port = atoi(gopt.optarg);
+            break;
+        case CMDLINE_BASE_PORT:
+            _base_port = atoi(gopt.optarg);
             break;
         default:
             _usage();
