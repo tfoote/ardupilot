@@ -427,14 +427,14 @@ void Aircraft::set_speedup(float speedup)
 void Aircraft::set_interface_ports(const char* address, const int port_in, const int port_out)
 {
     if (!socket_in.bind(address, port_in)) {
-        fprintf(stderr, "SITL: socket in bind failed - %s\n", strerror(errno));
+        fprintf(stderr, "SITL: socket in bind failed on sim in [%d] - %s\n", port_in, strerror(errno));
         exit(1);
     }
     socket_in.reuseaddress();
     socket_in.set_blocking(false);
 
     if (!socket_out.connect(address, port_out)) {
-        fprintf(stderr, "SITL: socket out bind failed - %s\n", strerror(errno));
+        fprintf(stderr, "SITL: socket out bind failed on sim out [%d]- %s\n", port_out, strerror(errno));
         exit(1);
     }
     socket_out.reuseaddress();

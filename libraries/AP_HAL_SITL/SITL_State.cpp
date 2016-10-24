@@ -120,7 +120,7 @@ void SITL_State::_sitl_setup(const char *home_str)
 void SITL_State::_setup_fdm(void)
 {
     if (!_sitl_rc_in.bind("0.0.0.0", _rc_in_port)) {
-        fprintf(stderr, "SITL: socket bind failed - %s\n", strerror(errno));
+        fprintf(stderr, "SITL: socket bind failed on rc_in_port [%d]- %s\n", _rc_in_port, strerror(errno));
         exit(1);
     }
     _sitl_rc_in.reuseaddress();
