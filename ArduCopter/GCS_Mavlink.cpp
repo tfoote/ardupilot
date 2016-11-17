@@ -498,6 +498,18 @@ bool GCS_MAVLINK_Copter::try_send_message(enum ap_message id)
         send_ahrs(copter.ahrs);
         break;
 
+    case MSG_GLOBAL_POS_ATT_NED:
+#if AP_ACS_USE == TRUE && AP_AHRS_NAVEKF_AVAILABLE == 1
+        CHECK_PAYLOAD_SIZE(GLOBAL_POS_ATT_NED);
+        copter.acs.send_position_attitude_to_payload(copter.ahrs, chan,
+                copter.DataFlash, 
+                //TODO: add is_flyinig() check to copter as it is in plane
+                //ensure we are flying:
+                ( (copter.motors.armed() || copter.ap.auto_armed) &&
+                    !copter.ap.land_complete)); 
+#endif
+        break;
+
     case MSG_SIMSTATE:
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
         CHECK_PAYLOAD_SIZE(SIMSTATE);
@@ -719,6 +731,9 @@ GCS_MAVLINK_Copter::data_stream_send(void)
     if (copter.gcs_out_of_time) return;
 
     if (stream_trigger(STREAM_EXTENDED_STATUS)) {
+#if AP_ACS_USE == TRUE && AP_AHRS_NAVEKF_AVAILABLE == 1
+        send_message(MSG_GLOBAL_POS_ATT_NED);
+#endif
         send_message(MSG_EXTENDED_STATUS1);
         send_message(MSG_EXTENDED_STATUS2);
         send_message(MSG_CURRENT_WAYPOINT);
@@ -825,6 +840,11 @@ void GCS_MAVLINK_Copter::handleMessage(mavlink_message_t* msg)
     {
         // We keep track of the last time we received a heartbeat from our GCS for failsafe purposes
         if(msg->sysid != copter.g.sysid_my_gcs) break;
+#if AP_ACS_USE == TRUE
+        //if acs.handle_heartbeat() returns true, then the heartbeat
+        //was from a companion computer, not from a GCS
+        if (copter.acs.handle_heartbeat(msg)) break;
+#endif
         copter.failsafe.last_heartbeat_ms = AP_HAL::millis();
         copter.pmTest1++;
         break;
