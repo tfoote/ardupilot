@@ -500,6 +500,7 @@ bool Copter::pre_arm_gps_checks(bool display_failure)
         return true;
     }
 
+#if CONFIG_HAL_BOARD != HAL_BOARD_SITL
     // ensure GPS is ok
     if (!position_ok()) {
         if (display_failure) {
@@ -525,6 +526,7 @@ bool Copter::pre_arm_gps_checks(bool display_failure)
         }
         return false;
     }
+#endif 
 
     // check home and EKF origin are not too far
     if (far_from_EKF_origin(ahrs.get_home())) {
