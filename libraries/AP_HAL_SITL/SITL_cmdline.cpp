@@ -360,7 +360,7 @@ void SITL_State::_parse_command_line(int argc, char * const argv[])
         sitl_model = model_constructors[simModel].constructor(home_str, model_str);
         if (simModel == GAZEBO)
         {
-            sitl_model->set_interface_ports(_gazebo_address, _gazebo_port_in, _gazebo_port_out);
+            sitl_model->set_interface_ports(_fdm_address, _gazebo_address, _gazebo_port_in, _gazebo_port_out);
         }
         sitl_model->set_speedup(speedup);
         sitl_model->set_instance(_instance);
