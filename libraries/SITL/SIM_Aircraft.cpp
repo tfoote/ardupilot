@@ -442,17 +442,19 @@ void Aircraft::set_speedup(float speedup)
 /*
   Create and set in/out socket
 */
-void Aircraft::set_interface_ports(const char* address, const int port_in, const int port_out)
+void Aircraft::set_interface_ports(const char* local_address, const char* gazebo_address, const int port_in, const int port_out)
 {
-    if (!socket_in.bind(address, port_in)) {
-        fprintf(stderr, "SITL: socket in bind failed - %s\n", strerror(errno));
+    // fprintf(stderr, "ARDUPILOT: Listening to %s on port %d\n", local_address, port_in);
+    if (!socket_in.bind(local_address, port_in)) {
+        fprintf(stderr, "SITL: socket in bind failed on sim in [%s:%d] - %s\n", local_address, port_in, strerror(errno));
         exit(1);
     }
     socket_in.reuseaddress();
     socket_in.set_blocking(false);
 
-    if (!socket_out.connect(address, port_out)) {
-        fprintf(stderr, "SITL: socket out bind failed - %s\n", strerror(errno));
+    // fprintf(stderr, "ARDUPILOT: Sending to to %s on port %d\n", gazebo_address, port_out);
+    if (!socket_out.connect(gazebo_address, port_out)) {
+        fprintf(stderr, "SITL: socket out connect failed on sim out [%s:%d]- %s\n", gazebo_address, port_out, strerror(errno));
         exit(1);
     }
     socket_out.reuseaddress();
