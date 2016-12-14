@@ -89,6 +89,10 @@ void Gazebo::recv_fdm(const struct sitl_input &input)
     double speedD =  pkt.velocity_xyz[2];
     velocity_ef = Vector3f(speedN, speedE, speedD);
 
+    // Approximate airspeed as gps velocity
+    airspeed = sqrt(speedN * speedN + speedE * speedE + speedD * speedD);
+    airspeed_pitot = airspeed;
+
     position = Vector3f(pkt.position_xyz[0],
                         pkt.position_xyz[1],
                         pkt.position_xyz[2]);
@@ -102,6 +106,10 @@ void Gazebo::recv_fdm(const struct sitl_input &input)
         adjust_frame_time(1.0/deltat);
     }
     last_timestamp = pkt.timestamp;
+
+    //Spoof battery voltage and current
+    battery_voltage = 12.4;
+    battery_current = 2.5;
 
     /* copied below from iris_ros.py */
     /*
