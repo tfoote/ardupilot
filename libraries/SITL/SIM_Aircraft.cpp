@@ -69,7 +69,11 @@ Aircraft::Aircraft(const char *home_str, const char *frame_str) :
 {
     // make the SIM_* variables available to simulator backends
     sitl = (SITL *)AP_Param::find_object("SIM_");
-    parse_home(home_str, home, home_yaw);
+    if (!parse_home(home_str, home, home_yaw))
+    {
+      printf("Aircraft::parse_home failed on \"%s\". Home not set!\n", home_str);
+    }
+
     location = home;
     ground_level = home.alt*0.01;
 
@@ -777,5 +781,3 @@ float Aircraft::filtered_servo_range(const struct sitl_input &input, uint8_t idx
 }
     
 } // namespace SITL
-
-
