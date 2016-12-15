@@ -32,6 +32,13 @@ const AP_Param::GroupInfo AP_ACS::var_info[] = {
     AP_GROUPINFO("KILL_THR", 1, AP_ACS, _kill_throttle, 0),
 
 
+    // @Param: ESC_RESET_LOGIC
+    // @DisplayName: Attempte ESC restart
+    // @Description: Set to 0 to disable esc reset logic.
+    // @User: Advanced
+    AP_GROUPINFO("ESC_RSET", 2, AP_ACS, _esc_reset_logic, 1),
+
+
     AP_GROUPEND
 };
 
@@ -208,8 +215,9 @@ bool AP_ACS::check(ACS_FlightMode mode,
 
         //is throttle is above 60 and current is below 2 and
         //the failsafe workaround not currently active?
-        if (_motor_fail_workaround_start_ms == 0 && 
-                (thr_out < 60 || _battery->current_amps() >= 2.0f)) {
+        if (! _esc_reset_logic ||
+             (_motor_fail_workaround_start_ms == 0 && 
+                  (thr_out < 60 || _battery->current_amps() >= 2.0f))) {
             _last_good_motor_time_ms = now;
         }
 
@@ -334,4 +342,3 @@ void AP_ACS::send_position_attitude_to_payload(AP_AHRS_NavEKF &ahrs, mavlink_cha
     }
 }
 #endif //AP_AHRS_NAVEKF_AVAILABLE
-
