@@ -91,6 +91,7 @@ protected:
     //params
     AP_Int8             _watch_heartbeat;
     AP_Int8             _kill_throttle;
+    AP_Int8             _esc_reset_logic;
 
     uint32_t            _last_computer_heartbeat_ms;
     uint32_t            _fence_breach_time_ms;
