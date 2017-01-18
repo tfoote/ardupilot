@@ -19,6 +19,7 @@
 #pragma once
 
 #include "SIM_Aircraft.h"
+#include <ctime>
 
 namespace SITL {
 
@@ -62,6 +63,17 @@ private:
     void send_servos(const struct sitl_input &input);
 
     double last_timestamp;
+
+    double last_receive;
+    double last_send;
+    double last_internal_action;
+    
+    double cycle_time;
+    unsigned int cycle;
+    double waiting_time[100];
+    double acting_time[100];
+    double external_acting_time[100];
+    
 
 };
 

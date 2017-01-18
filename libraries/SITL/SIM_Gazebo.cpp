@@ -19,6 +19,9 @@
 #include "SIM_Gazebo.h"
 
 #include <stdio.h>
+#include <algorithm>
+#include <sys/time.h>
+
 
 #include <AP_HAL/AP_HAL.h>
 
@@ -52,21 +55,68 @@ void Gazebo::send_servos(const struct sitl_input &input)
     socket_out.send(&pkt, sizeof(pkt));
 }
 
+double getsecondstoday()
+{
+  struct timeval time;
+  gettimeofday(&time, NULL); // Start Time
+  return (time.tv_sec) + (time.tv_usec / 1000000.0);
+}
+
 /*
   receive an update from the FDM
   This is a blocking function
  */
 void Gazebo::recv_fdm(const struct sitl_input &input)
 {
+    unsigned int iterations = 1;
     fdm_packet pkt;
-
+    this->cycle ++;
+    if (this->cycle >= iterations)
+    {
+      this->cycle = 0;
+      
+      
+      double total_wait = 0;
+      double total_acting = 0;
+      double total_external_acting = 0;
+      double max_wait = 0;
+      double max_acting = 0;
+      double max_external_acting = 0;
+      for (unsigned int i = 0; i < iterations; i++)
+      {
+        total_acting += acting_time[i];
+        total_wait += waiting_time[i];
+        total_external_acting += external_acting_time[i];
+        max_acting = std::max(max_acting, acting_time[i]);
+        max_wait = std::max(max_wait, waiting_time[i]);
+        max_external_acting = std::max(max_external_acting, external_acting_time[i]);
+      }
+      
+      double average_acting = total_acting / (float)iterations;
+      double average_wait = total_wait / (float)iterations;
+      double average_external_acting = total_external_acting / (float)iterations;
+      double now = getsecondstoday();
+      double freq = (float) iterations / (now - cycle_time);
+      cycle_time = now;
+      double fraction = average_external_acting / (average_acting + average_external_acting + average_wait);
+      double max_fraction = max_external_acting / (max_acting + max_external_acting + max_wait);
+      double external_total_fraction = total_external_acting / (total_acting + total_external_acting + total_wait);
+      fprintf(stdout, "<%d> Samples >> ArdupilotFreq: (%f) Average[max] wait %f[%f], acting: %f[%f], external acting: %f[%f] External blocking: %f %%, Max External blocking: %f %% Sum External_fraction %f %%\n", iterations, freq, average_wait, max_wait, average_acting, max_acting, average_external_acting, max_external_acting, fraction * 100, max_fraction * 100, external_total_fraction * 100);
+    }
     /*
       we re-send the servo packet every 0.1 seconds until we get a
       reply. This allows us to cope with some packet loss to the FDM
      */
+    double now = getsecondstoday();
+    this->external_acting_time[this->cycle] = ( now - last_internal_action );
+    last_send = now;
     while (socket_in.recv(&pkt, sizeof(pkt), 100) != sizeof(pkt)) {
         send_servos(input);
     }
+    now = getsecondstoday();
+    this->waiting_time[this->cycle] = ( now - last_send );
+    last_receive = now;
+
 
     // get imu stuff
     accel_body = Vector3f(pkt.imu_linear_acceleration_xyz[0],
@@ -134,6 +184,9 @@ void Gazebo::recv_fdm(const struct sitl_input &input)
     velocity_body = self.dcm.transposed() * self.velocity
     self.accelerometer = self.accel_body.copy()
     */
+    now = getsecondstoday();
+    this->acting_time[this->cycle] = ( now - last_receive );
+    last_internal_action = now;
 }
 
 /*
