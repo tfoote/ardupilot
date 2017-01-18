@@ -275,16 +275,19 @@ void Aircraft::sync_frame_time(void)
 #if 0
         printf("%f = %lf - %lf \n", float(diff)                 / 1000000.0f,
                                     double(scaled_wall_time_us) / 1000000.0,
-                                    double(sim_time)            / 1000000.0);
+                                    double(sim_time)            / 1000000.0); 
+        printf("now: %lu, micros64: %u, first_wall_time_us: %lu \n", now, AP_HAL::micros64(), first_wall_time_us );
 #endif //0
 
+// This is not appropriate for Gazebo SIM. It slowing down ardupilot which is lockstepping with gazebo
+#if 0
 	//ACS mod for keeping ROS clocked lined up with Ardupilot and JSBSim
 	//clocks:
         //slow down a bit if sim_time has gotten ahead of wall_time
         if (diff < 0) {
             usleep(100000);
         }
-
+#endif //0
         last_wall_time_us = now;
         frame_counter = 0;
     }
