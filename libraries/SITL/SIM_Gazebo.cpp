@@ -68,7 +68,7 @@ double getsecondstoday()
  */
 void Gazebo::recv_fdm(const struct sitl_input &input)
 {
-    unsigned int iterations = 1;
+    unsigned int iterations = 1000;
     fdm_packet pkt;
     this->cycle ++;
     if (this->cycle >= iterations)
@@ -110,7 +110,7 @@ void Gazebo::recv_fdm(const struct sitl_input &input)
     double now = getsecondstoday();
     this->external_acting_time[this->cycle] = ( now - last_internal_action );
     last_send = now;
-    while (socket_in.recv(&pkt, sizeof(pkt), 100) != sizeof(pkt)) {
+    while (socket_in.recv(&pkt, sizeof(pkt), 1) != sizeof(pkt)) {
         send_servos(input);
     }
     now = getsecondstoday();
@@ -194,12 +194,28 @@ void Gazebo::recv_fdm(const struct sitl_input &input)
  */
 void Gazebo::update(const struct sitl_input &input)
 {
+    // static double last_update_time = 0;
+    // double now = getsecondstoday();
+    // double before_send = now;
+    // printf("Outside update time is %f\n", now - last_update_time);
     send_servos(input);
+    // now = getsecondstoday();
+    // printf("send_servos took %f\n", now - before_send);
+    // double before_recv_fdm = now;
     recv_fdm(input);
+    // now = getsecondstoday();
+    // printf("recv_fdm took %f\n", now - before_recv_fdm);
+    // double before_update_position = now;
     update_position();
+    // now = getsecondstoday();
+    // printf("update_position took %f\n", now - before_update_position);
+    // double before_mag_field = now;
 
     // update magnetic field
     update_mag_field_bf();
+    // now = getsecondstoday();
+    // printf("update_mag_field_bf took %f\n", now - before_mag_field);
+    // last_update_time = getsecondstoday();
 }
 
 } // namespace SITL
