@@ -649,7 +649,7 @@ void Plane::set_servos(void)
     //to recover from.
     //If ACS module commands it, kill throtttle.  
     if (acs.get_kill_throttle() != 0) {
-            channel_throttle->set_radio_out(aparm.throttle_min.get());
+            channel_throttle->set_control_in(aparm.throttle_min.get());
             return;
             
             if (! acs.get_throttle_kill_notified()) {
@@ -661,8 +661,6 @@ void Plane::set_servos(void)
         acs.set_throttle_kill_notified(false);
     }
 #endif
-
-    int16_t last_throttle = channel_throttle->get_radio_out();
 
     // do any transition updates for quadplane
     quadplane.update();    
@@ -686,6 +684,7 @@ void Plane::set_servos(void)
         // we are within the ground steering altitude but don't have a
         // dedicated steering channel. Set the rudder to the ground
         // steering output
+        //
         steering_control.rudder = steering_control.steering;
     }
     SRV_Channels::set_output_scaled(SRV_Channel::k_rudder, steering_control.rudder);
