@@ -649,16 +649,14 @@ void Plane::set_servos(void)
     //to recover from.
     //If ACS module commands it, kill throtttle.  
     if (acs.get_kill_throttle() != 0) {
-        SRV_Channels::set_output_scaled(SRV_Channel::k_throttle, 
-                aparm.throttle_min.get());
-           
-        if (! acs.get_throttle_kill_notified()) {
-            gcs_send_text(MAV_SEVERITY_CRITICAL,
-                    "ACS COMMANDED: killing throttle");
-            acs.set_throttle_kill_notified(true);
-        }
-        return;
-
+            channel_throttle->set_control_in(aparm.throttle_min.get());
+            return;
+            
+            if (! acs.get_throttle_kill_notified()) {
+                gcs_send_text(MAV_SEVERITY_CRITICAL,
+                        "ACS COMMANDED: killing throttle");
+                acs.set_throttle_kill_notified(true);
+            }
     } else {
         acs.set_throttle_kill_notified(false);
     }
